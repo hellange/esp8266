@@ -80,210 +80,7 @@ static class ASPI_t ASPI;
 
 #endif
 
-#if SDCARD
 
-#if defined(VERBOSE) && (VERBOSE > 0)
-#define INFO(X) Serial.println((X))
-#if defined(RASPBERRY_PI)
-#define REPORT(VAR) fprintf(stderr, #VAR "=%d\n", (VAR))
-#else
-#define REPORT(VAR) (Serial.print(#VAR "="), Serial.print(VAR, DEC), Serial.print(' '), Serial.println(VAR, HEX))
-#endif
-#else
-#define INFO(X)
-#define REPORT(X)
-#endif
-
-struct dirent {
-  char name[8];
-  char ext[3];
-  byte attribute;
-  byte reserved[8];
-  uint16_t cluster_hi;  // FAT32 only
-  uint16_t time;
-  uint16_t date;
-  uint16_t cluster;
-  uint32_t size;
-};
-
-// https://www.sdcard.org/downloads/pls/simplified_specs/Part_1_Physical_Layer_Simplified_Specification_Ver_3.01_Final_100518.pdf
-// page 22
-// http://mac6.ma.psu.edu/space2008/RockSat/microController/sdcard_appnote_foust.pdf
-// http://elm-chan.org/docs/mmc/mmc_e.html
-// http://www.pjrc.com/tech/8051/ide/fat32.html
-
-#define FAT16 0
-#define FAT32 1
-
-#define DD
-
-class sdcard {
-  public:
-  void sel() {
-    digitalWrite(pin, LOW);
-    delay(1);
-  }
-  void desel() {
-    digitalWrite(pin, HIGH);
-    SPI.transfer(0xff); // force DO release
-  }
-  void sd_delay(byte n) {
-    while (n--) {
-      DD SPI.transfer(0xff);
-    }
-  }
-
-  void cmd(byte cmd, uint32_t lba = 0, uint8_t crc = 0x95) {
-#if VERBOSE > 1
-    Serial.print("cmd ");
-    Serial.print(cmd, DEC);
-    Serial.print(" ");
-    Serial.print(lba, HEX);
-    Serial.println();
-#endif
-
-    sel();
-    // DD SPI.transfer(0xff);
-    DD SPI.transfer(0x40 | cmd);
-    DD SPI.transfer(0xff & (lba >> 24));
-    DD SPI.transfer(0xff & (lba >> 16));
-    DD SPI.transfer(0xff & (lba >> 8));
-    DD SPI.transfer(0xff & (lba));
-    DD SPI.transfer(crc);
-    // DD SPI.transfer(0xff);
-  }
-
-  byte response() {
-    byte r;
-    DD
-    r = SPI.transfer(0xff);
-    while (r & 0x80) {
-      DD
-      r = SPI.transfer(0xff);
-    }
-    return r;
-  }
-
-  byte R1() {   // read response R1
-    byte r = response();
-    desel();
-    SPI.transfer(0xff);   // trailing byte
-    return r;
-  }
-
-  byte sdR3(uint32_t &ocr) {  // read response R3
-    byte r = response();
-    for (byte i = 4; i; i--)
-      ocr = (ocr << 8) | SPI.transfer(0xff);
-    SPI.transfer(0xff);   // trailing byte
-
-    desel();
-    return r;
-  }
-
-  byte sdR7() {  // read response R3
-    byte r = response();
-    for (byte i = 4; i; i--)
-      // Serial.println(SPI.transfer(0xff), HEX);
-      SPI.transfer(0xff);
-    desel();
-
-    return r;
-  }
-
-  void appcmd(byte cc, uint32_t lba = 0) {
-    cmd(55); R1();
-    cmd(cc, lba);
-  }
-
-  void begin(byte p) {
-
-  finished:
-    INFO("finished");
-    ;
-  }
-  void cmd17(uint32_t off) {
-    if (ccs)
-      cmd(17, off >> 9);
-    else
-      cmd(17, off & ~511L);
-    R1();
-    sel();
-    while (SPI.transfer(0xff) != 0xfe)
-      ;
-  }
-  void rdn(byte *d, uint32_t off, uint16_t n) {
-    cmd17(off);
-    uint16_t i;
-    uint16_t bo = (off & 511);
-    for (i = 0; i < bo; i++)
-      SPI.transfer(0xff);
-    for (i = 0; i < n; i++)
-      *d++ = SPI.transfer(0xff);
-    for (i = 0; i < (514 - bo - n); i++)
-      SPI.transfer(0xff);
-    desel();
-  }
-
-  uint32_t rd4(uint32_t off) {
-    uint32_t r;
-    rdn((byte*)&r, off, sizeof(r));
-    return r;
-  }
-
-  uint16_t rd2(uint32_t off) {
-    uint16_t r;
-    rdn((byte*)&r, off, sizeof(r));
-    return r;
-  }
-
-  byte rd(uint32_t off) {
-    byte r;
-    rdn((byte*)&r, off, sizeof(r));
-    return r;
-  }
-  byte pin;
-  byte ccs;
-
-  byte type;
-  uint16_t sectors_per_cluster;
-  uint16_t reserved_sectors;
-  uint16_t max_root_dir_entries;
-  uint16_t sectors_per_fat;
-  uint16_t cluster_size;
-  uint32_t root_dir_first_cluster;
-
-  // These are all linear addresses, hence the o_ prefix
-  uint32_t o_partition;
-  uint32_t o_fat;
-  uint32_t o_root;
-  uint32_t o_data;
-};
-
-static void dos83(byte dst[11], const char *ps)
-{
-  byte i = 0;
-  while (*ps) {
-    if (*ps != '.')
-      dst[i++] = toupper(*ps);
-    else {
-      while (i < 8)
-        dst[i++] = ' ';
-    }
-    ps++;
-  }
-  while (i < 11)
-    dst[i++] = ' ';
-}
-
-#else
-class sdcard {
-public:
-  void begin(int p) {};
-};
-#endif
-
-////////////////////////////////////////////////////////////////////////
 
 class xy {
 public:
@@ -323,9 +120,6 @@ public:
   void swap(void);
   void flush(void);
   void finish(void);
-
-  void play(uint8_t instrument, uint8_t note = 0);
-  void sample(uint32_t start, uint32_t len, uint16_t freq, uint16_t format, int loop = 0);
 
   void get_inputs(void);
   void get_accel(int &x, int &y, int &z);
@@ -475,9 +269,6 @@ public:
   void safeload(const char *filename);
   void alert(const char *message);
 
-  void storage(void);
-  void tune(void);
-
 private:
   static void cFFFFFF(byte v);
   static void cI(uint32_t);
@@ -489,8 +280,6 @@ private:
 
   static void align(byte n);
   void cmdbyte(uint8_t b);
-
-  uint32_t measure_freq(void);
 
   uint16_t rseed;
 };

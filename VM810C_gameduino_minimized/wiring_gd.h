@@ -6,11 +6,7 @@
 //https://github.com/esp8266/Arduino/issues/1429
 #define CS 15
 
-//       nodemcu
-// CCLK  D5 (GPIO14)
-// CMISO D6 (GDIO12)
-// CMOSI D7 (GPIO13)
-// CCS   D8 (GPIO15)
+
 
 class GDTransport {
 private:

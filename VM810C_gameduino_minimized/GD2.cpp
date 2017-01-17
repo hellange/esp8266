@@ -222,26 +222,6 @@ void GDClass::swap(void) {
 #endif
 }
 
-uint32_t GDClass::measure_freq(void)
-{
-  unsigned long t0 = GDTR.rd32(REG_CLOCK);
-  delayMicroseconds(15625);
-  unsigned long t1 = GDTR.rd32(REG_CLOCK);
-  // Serial.println((t1 - t0) << 6);
-  return (t1 - t0) << 6;
-}
-
-#define LOW_FREQ_BOUND  47040000UL
-// #define LOW_FREQ_BOUND  32040000UL
-
-void GDClass::tune(void)
-{
-  uint32_t f;
-  for (byte i = 0; (i < 31) && ((f = measure_freq()) < LOW_FREQ_BOUND); i++) {
-    GDTR.wr(REG_TRIM, i);
-  }
-  GDTR.wr32(REG_FREQUENCY, f);
-}
 
 void GDClass::begin(uint8_t options) {
 #if defined(ARDUINO)

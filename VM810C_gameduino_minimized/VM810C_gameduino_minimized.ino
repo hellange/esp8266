@@ -2,13 +2,22 @@
  *  Testing 7" display with FT810 graphics controller
  *  and NodeMCU processor
  *  
- *  FT81x graphics driver is copied from jamesbowman / gd2-lib
+ *  FT81x graphics driver is initially copied from 
+ *  jamesbowman / gd2-lib
  *  (https://github.com/jamesbowman/gd2-lib.git)
+ *  Reduced and modified to compile with NodeMcu
  *  
  *  Connections:
  *  Connect SPI between nodeMcu and VM810C development board.
  *  Note that poor power supply can cause a lot or problems.
  *  I had best luck (stability) driving them with battery !
+ *  
+ *       nodemcu
+ * CCLK  D5 (GPIO14)
+ * CMISO D6 (GDIO12)
+ * CMOSI D7 (GPIO13)
+ * CCS   D8 (GPIO15)
+ * 
  ************************************************/
 
 #include <SPI.h>
@@ -18,7 +27,7 @@
 
 void setup()
 {
-  wdt_disable();
+  //wdt_disable();
   Serial.begin(9600);
   Serial.println("Initializing WeatherNG graphics controller FT81x...");
   GD.begin(0);
@@ -57,24 +66,6 @@ void drawCircle(word x, word y, word pixels) {
 }
 
 void drawSprite(int16_t x, int16_t y, byte handle, byte cell) {
-  // In order to draw bitmap on x coordinates higher that 512
-  // we use VertexTranslateX which according to documentation:
-  // "Specifies the offset added to vertex X coordinates. 
-  //  This command allows drawing to be shifted on the screen"
-  // Not sure if this is the right approach, but it seems to work
-//  if (x < 0) {
-//    // For negative x we shift instead of setting x
-//    GD.VertexTranslateX(x * 16 );
-//    x = 0; 
-//  } else if (x > 511) {
-//    // for high values we start to use shift
-//    // and reduces the x value accordingly
-//    GD.VertexTranslateX(511 * 16);
-//    x = x - 512;
-//  } else {
-//    GD.VertexTranslateX(0);
-//  }
-
   GD.SaveContext();
   GD.Begin(BITMAPS);
   GD.ColorRGB(255,255,255);
@@ -88,28 +79,9 @@ void drawRandomCircles(int nr) {
   GD.Begin(POINTS);
   for (int i = 0; i < nr; i++) {
     GD.PointSize(GD.random(16*50));
-    GD.ColorRGB(GD.random(256),
-                GD.random(256),
-                GD.random(256));
+    GD.ColorRGB(GD.random(256), GD.random(256), GD.random(256));
     GD.ColorA(GD.random(256));
-
-    int16_t x = GD.random(800);
-    int16_t y = GD.random(480);
-    
-//    if (x < 0) {
-//      // For negative x we shift instead of setting x
-//      GD.VertexTranslateX(x * 16 );
-//      x = 0; 
-//    } else if (x > 511) {
-//      // for high values we start to use shift
-//      // and reduces the x value accordingly
-//      GD.VertexTranslateX(511 * 16);
-//      x = x - 511;
-//    } else {
-//      GD.VertexTranslateX(0);
-//    }
-
-    GD.Vertex2ii(x, y);
+    GD.Vertex2ii(GD.random(800), GD.random(480));
   }
   GD.RestoreContext();
 }
