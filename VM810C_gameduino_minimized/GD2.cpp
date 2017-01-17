@@ -1,3 +1,7 @@
+// 
+// Gameduino2 code, minimized to include only what I use and to be possible
+// to compile for NodeMCU
+//
 #include <Arduino.h>
 #include "SPI.h"
 #if !defined(__SAM3X8E__)

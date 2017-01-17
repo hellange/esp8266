@@ -1,61 +1,20 @@
 /************************************************
- *  Next generation weather station base
+ *  Testing 7" display with FT810 graphics controller
+ *  and NodeMCU processor
  *  
  *  FT81x graphics driver is copied from jamesbowman / gd2-lib
  *  (https://github.com/jamesbowman/gd2-lib.git)
  *  
  *  Connections:
-
- VM810C          UNO
-
- SCK             13
- MOSI            11          
- MISO            12
- CS               8 
- 5V              5V
- GND            GND
-
-
- ER-TPC070-6    UNO
-
- 1                          GND
- 2              A4          SDA
- 3              A5          SCL
- 4                          RESET
- 5              2           INT
- 6                          NC
- 7              3.3V        VDD
- 8                          VDD
- 9                          GND
- 10             GND         GND
- 
+ *  Connect SPI between nodeMcu and VM810C development board.
+ *  Note that poor power supply can cause a lot or problems.
+ *  I had best luck (stability) driving them with battery !
  ************************************************/
 
 #include <SPI.h>
 #include "GD2.h"
 #include "Wire.h"
 #include "walk_assets.h"
-
-#define CTP_INT           2    // touch data ready for read from touch panel
-
-
-void serialDebugOutput(int nr_of_touches, word *coordinates) {
-  for (byte i = 0; i < nr_of_touches; i++){
-
-    word x = coordinates[i * 2];
-    word y= coordinates[i * 2 + 1];
-    
-    Serial.print("x");
-    Serial.print(i);
-    Serial.print("=");
-    Serial.print(x);
-    Serial.print(",");
-    Serial.print("y");
-    Serial.print(i);
-    Serial.print("=");
-    Serial.println(y);
-  }
-}
 
 void setup()
 {
@@ -65,27 +24,28 @@ void setup()
   GD.begin(0);
   LOAD_ASSETS();
   Serial.println("Done.");
-
 }
 
 void drawMainText() {
 
-
-
-  GD.ColorA(GD.random(256));
+  GD.ColorRGB(255,255,255);
+  GD.ColorA(200);
 
   // X centered at upper left corner
   GD.cmd_text(0, 0 , 31, OPT_CENTER, "X");
 
+  // put FT81x font 33 in slot 1
+  GD.cmd_romfont(1, 33);
+  
   // Text centered on screen
-  GD.cmd_text(GD.w / 2, GD.h / 2, 31, OPT_CENTER, "WeatherNG");
-  GD.cmd_text(GD.w / 2, GD.h / 2 + 30 , 28, OPT_CENTER, "Hello, mini world");
+  GD.cmd_text(GD.w / 2, GD.h / 2 - 40,   1, OPT_CENTER, "NodeMCU Gameduino2");
+  GD.cmd_text(GD.w / 2, GD.h / 2 + 20 , 28, OPT_CENTER, "Processor: NodeMCU V2");
+  GD.cmd_text(GD.w / 2, GD.h / 2 + 50 , 28, OPT_CENTER, "Software: Modified Gameduino2 code");
+  GD.cmd_text(GD.w / 2, GD.h / 2 + 80 , 27, OPT_CENTER, "Display controller board: VM810C with FT810");
+  GD.cmd_text(GD.w / 2, GD.h / 2 + 110 , 27, OPT_CENTER, "Display: 7'' 800x480");
 
   // X centered at lower right corner
   GD.cmd_text(GD.w, GD.h, 31, OPT_CENTER, "X");
-
-  randomSeed(analogRead(0));
-
 }
 
 
@@ -114,16 +74,17 @@ void drawSprite(int16_t x, int16_t y, byte handle, byte cell) {
 //  } else {
 //    GD.VertexTranslateX(0);
 //  }
- 
+
+  GD.SaveContext();
   GD.Begin(BITMAPS);
   GD.ColorRGB(255,255,255);
   GD.ColorA(255);
   GD.Vertex2ii(x, y, handle, cell);
-
   GD.RestoreContext();
 }
 
 void drawRandomCircles(int nr) {
+  GD.SaveContext();
   GD.Begin(POINTS);
   for (int i = 0; i < nr; i++) {
     GD.PointSize(GD.random(16*50));
@@ -150,6 +111,7 @@ void drawRandomCircles(int nr) {
 
     GD.Vertex2ii(x, y);
   }
+  GD.RestoreContext();
 }
 
 // Trying to solve problem with constant watchdog resets
@@ -173,9 +135,8 @@ void loop()
 {
 
   Serial.println("looping...");
-  GD.ClearColorRGB(0x0000dd);
+  GD.ClearColorRGB(0x0000ee);
   GD.Clear();
-
 
   drawRandomCircles(100);
   yield();
