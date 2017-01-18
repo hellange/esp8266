@@ -38,10 +38,7 @@ void setup()
 void drawMainText() {
 
   GD.ColorRGB(255,255,255);
-  GD.ColorA(200);
-
-  // X centered at upper left corner
-  GD.cmd_text(0, 0 , 31, OPT_CENTER, "X");
+  GD.ColorA(230);
 
   // put FT81x font 33 in slot 1
   GD.cmd_romfont(1, 33);
@@ -49,12 +46,10 @@ void drawMainText() {
   // Text centered on screen
   GD.cmd_text(GD.w / 2, GD.h / 2 - 40,   1, OPT_CENTER, "NodeMCU Gameduino2");
   GD.cmd_text(GD.w / 2, GD.h / 2 + 20 , 28, OPT_CENTER, "Processor: NodeMCU V2");
-  GD.cmd_text(GD.w / 2, GD.h / 2 + 50 , 28, OPT_CENTER, "Software: Modified Gameduino2 code");
+  GD.cmd_text(GD.w / 2, GD.h / 2 + 50 , 28, OPT_CENTER, "Graphics library: Modified Gameduino2");
   GD.cmd_text(GD.w / 2, GD.h / 2 + 80 , 27, OPT_CENTER, "Display controller board: VM810C with FT810");
   GD.cmd_text(GD.w / 2, GD.h / 2 + 110 , 27, OPT_CENTER, "Display: 7'' 800x480");
 
-  // X centered at lower right corner
-  GD.cmd_text(GD.w, GD.h, 31, OPT_CENTER, "X");
 }
 
 
@@ -102,6 +97,7 @@ void delayWithYield(int ms) {
 int outsize_screen = 20; // how many pixels outside screen we will use
 int walker_figure = 0;
 int walker_position = -outsize_screen;
+int live_counter;
 
 void loop()
 {
@@ -114,7 +110,7 @@ void loop()
   yield();
   drawMainText();
 
-  walker_position = walker_position + 2;
+  walker_position = walker_position + 4;
   if (walker_position > 800 + outsize_screen) {
     walker_position = - outsize_screen;
   }
@@ -124,8 +120,15 @@ void loop()
     walker_figure = 0;
   }
   drawSprite(walker_position, 250, WALK_HANDLE, walker_figure); // animate
-  
+
+  GD.ColorRGB(255,255,255);
+  GD.ColorA(255);
+  GD.cmd_number(10, 440 , 27, OPT_CENTERY, live_counter);
+
   GD.swap();    
   delayWithYield(100);
+  live_counter ++;
+
+
 
 }
